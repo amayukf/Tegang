@@ -1,10 +1,11 @@
 import express from 'express';
-import { getProviders, getProviderById, updateAvailability, updateProfile } from '../controllers/provider.controller.js';
+import { getProviders, getProviderById, getMyProfile, updateAvailability, updateProfile } from '../controllers/provider.controller.js';
 import { getProviderReviews } from '../controllers/review.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
+router.get('/me', protect, restrictTo('provider'), getMyProfile);
 router.get('/', getProviders);
 router.get('/:id', getProviderById);
 router.get('/:id/reviews', getProviderReviews);

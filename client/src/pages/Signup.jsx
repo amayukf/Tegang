@@ -74,6 +74,7 @@ export default function Signup() {
     name: '',
     phone: '',
     password: '',
+    category: 'electrical',
     role: params.get('role') === 'provider' ? 'provider' : 'customer',
   });
   const [loading, setLoading] = useState(false);
@@ -95,7 +96,7 @@ export default function Signup() {
       localStorage.setItem('role', res.data.role);
       localStorage.setItem('userName', res.data.name);
       toast.success('Account created', 'Welcome to Tegagn');
-      navigate(res.data.role === 'customer' ? '/' : '/dashboard', { replace: true });
+      navigate(res.data.role === 'customer' ? '/home' : '/dashboard', { replace: true });
     } catch (err) {
       toast.error('Could not create account', err.response?.data?.message || 'Please try again');
     } finally {
@@ -139,6 +140,27 @@ export default function Signup() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
+        {roleSelected === 'provider' && (
+          <div>
+            <label className="form-label" htmlFor="category">Primary Skill / Service Category</label>
+            <select
+              id="category"
+              className="input bg-white cursor-pointer"
+              value={form.category}
+              onChange={e => setForm({ ...form, category: e.target.value })}
+            >
+              <option value="electrical">⚡ Electrical Services</option>
+              <option value="plumbing">🚰 Plumbing & Sanitation</option>
+              <option value="cleaning">🧹 Home & Office Cleaning</option>
+              <option value="appliances">🔌 Appliance Repair</option>
+              <option value="carpentry">🪚 Carpentry & Woodwork</option>
+              <option value="painting">🎨 Painting & Wall Decor</option>
+              <option value="moving">📦 Moving & Logistics</option>
+              <option value="handyman">🛠️ General Handyman</option>
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="form-label" htmlFor="name">Full name</label>
           <input

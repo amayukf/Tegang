@@ -25,6 +25,7 @@ export default function PostJob() {
   const token = localStorage.getItem('token');
   const preselectedProvider = params.get('provider');
 
+  const [targetProvider, setTargetProvider] = useState(null);
   const [form, setForm] = useState({
     category: 'plumbing',
     description: '',
@@ -37,8 +38,17 @@ export default function PostJob() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Prefill date to tomorrow when switching to scheduled
-  }, []);
+    if (preselectedProvider) {
+      axios.get(`${API_BASE_URL}/providers/${preselectedProvider}`)
+        .then(res => {
+          setTargetProvider(res.data);
+          if (res.data.category) {
+            setForm(f => ({ ...f, category: res.data.category }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [preselectedProvider]);
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -80,9 +90,19 @@ export default function PostJob() {
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
               Post a job
             </h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              Describe the work and providers in your area will send quotes.
-            </p>
+            {targetProvider && (
+              <div className="mt-4 p-4 rounded-xl bg-primary-50 border border-primary-200 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-700 text-white font-semibold text-sm">
+                  {(targetProvider.userId?.name || 'P').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Direct Request</p>
+                  <p className="text-sm font-medium text-neutral-900">
+                    {targetProvider.userId?.name || 'Provider'} ({targetProvider.category})
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={onSubmit} className="mt-6 space-y-5">
               {/* Category */}

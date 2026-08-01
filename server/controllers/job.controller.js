@@ -13,8 +13,12 @@ const VALID_TRANSITIONS = {
 const isValidTransition = (from, to) => VALID_TRANSITIONS[from]?.includes(to);
 
 const isParticipant = (job, user) => {
-  return job.customerId.equals(user._id) ||
-    (job.providerId && job.providerId.equals(user._id));
+  if (user.role === 'provider' && (!job.providerId || job.providerId === null)) {
+    return true;
+  }
+  const customerMatch = job.customerId && (job.customerId._id ? job.customerId._id.equals(user._id) : job.customerId.equals(user._id));
+  const providerMatch = job.providerId && (job.providerId._id ? job.providerId._id.equals(user._id) : job.providerId.equals(user._id));
+  return customerMatch || providerMatch;
 };
 
 export const createJob = async (req, res) => {
@@ -66,9 +70,8 @@ export const getIncomingJobs = async (req, res) => {
     const jobs = await Job.find({
       $or: [
         { providerId: req.user._id },
-        { providerId: null, category: profile.category }
-      ],
-      status: { $in: ['pending', 'quoted'] }
+        { providerId: null }
+      ]
     })
       .sort({ createdAt: -1 })
       .populate('customerId', 'name phone');

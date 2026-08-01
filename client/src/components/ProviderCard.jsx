@@ -30,10 +30,19 @@ const statusConfig = {
   },
 };
 
+const defaultCategoryAvatars = {
+  plumbing: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop&q=80',
+  electrical: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+  construction: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+  painting: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+  cleaning: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  other: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
+};
+
 export default function ProviderCard({ provider }) {
   const user = provider.userId || {};
   const name = user.name || 'Provider';
-  const initial = name.charAt(0).toUpperCase();
+  const avatarUrl = provider.profilePhotoUrl || user.profileImage || defaultCategoryAvatars[provider.category] || defaultCategoryAvatars.other;
   const status = statusConfig[provider.availabilityStatus] || statusConfig.busy;
 
   const priceMin = Number(provider.priceRangeMin || 0);
@@ -45,17 +54,11 @@ export default function ProviderCard({ provider }) {
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div className="relative shrink-0">
-            {provider.profilePhotoUrl ? (
-              <img
-                src={provider.profilePhotoUrl}
-                alt={name}
-                className="h-14 w-14 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-primary-700 font-semibold text-lg">
-                {initial}
-              </div>
-            )}
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="h-14 w-14 rounded-full object-cover border border-neutral-200 shadow-xs"
+            />
             <span
               className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full ring-2 ring-white ${status.dot}`}
               aria-hidden

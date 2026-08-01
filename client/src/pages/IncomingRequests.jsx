@@ -39,7 +39,8 @@ export default function IncomingRequests() {
     })();
   }, [token, toast]);
 
-  const pending = jobs.filter(j => j.status === 'pending');
+  const directPending = jobs.filter(j => j.status === 'pending' && j.providerId);
+  const publicPending = jobs.filter(j => j.status === 'pending' && !j.providerId);
   const active = jobs.filter(j => ['quoted', 'accepted', 'in_progress'].includes(j.status));
   const done = jobs.filter(j => j.status === 'completed');
 
@@ -55,7 +56,7 @@ export default function IncomingRequests() {
             </h1>
             <p className="mt-1 text-sm text-neutral-500 flex items-center gap-1">
               <Briefcase className="h-4 w-4" strokeWidth={1.8} />
-              {loading ? 'Loading…' : `${pending.length} new · ${active.length} active · ${done.length} completed`}
+              {loading ? 'Loading…' : `${directPending.length} direct · ${publicPending.length} public open · ${active.length} active`}
             </p>
           </div>
           <Link to="/dashboard" className="btn-secondary">
@@ -65,18 +66,28 @@ export default function IncomingRequests() {
 
         <div className="mt-6 space-y-8">
           <Section
-            title="New requests"
-            subtitle="Jobs waiting for your quote"
+            title="Direct requests for you"
+            subtitle="Customer explicitly requested your service"
+            icon={<Zap className="h-4 w-4" strokeWidth={1.8} />}
+            tone="bg-amber-50 text-amber-800 border-amber-200"
+            items={directPending}
+            loading={loading}
+            emptyText="No direct requests at the moment."
+            collapseEmpty
+          />
+          <Section
+            title="Open community requests"
+            subtitle="Public jobs open for all service providers"
             icon={<Sparkles className="h-4 w-4" strokeWidth={1.8} />}
             tone="bg-accent-50 text-accent-700 border-accent-100"
-            items={pending}
+            items={publicPending}
             loading={loading}
-            emptyText="No new requests yet — check back soon."
+            emptyText="No public requests yet — check back soon."
           />
           <Section
             title="Active jobs"
             subtitle="Quoted, accepted, and in progress"
-            icon={<Zap className="h-4 w-4" strokeWidth={1.8} />}
+            icon={<Briefcase className="h-4 w-4" strokeWidth={1.8} />}
             tone="bg-primary-50 text-primary-700 border-primary-100"
             items={active}
             loading={loading}

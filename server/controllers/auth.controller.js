@@ -70,6 +70,7 @@ export const signup = async (req, res) => {
       name: user.name,
       phone: user.phone,
       role: user.role,
+      profileImage: user.profileImage || '',
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -105,6 +106,7 @@ export const login = async (req, res) => {
       name: user.name,
       phone: user.phone,
       role: user.role,
+      profileImage: user.profileImage || '',
       token: generateToken(user._id)
     });
   } catch (error) {
@@ -114,4 +116,28 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   res.json(req.user);
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, profileImage } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (name) user.name = name.trim();
+    if (phone) user.phone = normalizePhone(phone);
+    if (profileImage !== undefined) user.profileImage = profileImage;
+
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      profileImage: user.profileImage || ''
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Error updating profile' });
+  }
 };

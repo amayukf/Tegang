@@ -17,7 +17,7 @@ export const getProviders = async (req, res) => {
 
     const providers = await ProviderProfile.find(filter)
       .sort(sortObj)
-      .populate('userId', 'name phone');
+      .populate('userId', 'name phone profileImage');
 
     res.json(providers);
   } catch (error) {
@@ -29,13 +29,34 @@ export const getProviders = async (req, res) => {
 export const getProviderById = async (req, res) => {
   try {
     const provider = await ProviderProfile.findById(req.params.id)
-      .populate('userId', 'name phone');
+      .populate('userId', 'name phone profileImage');
 
     if (!provider) {
       return res.status(404).json({ message: 'Provider not found' });
     }
 
     res.json(provider);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/providers/me — current provider profile & live metrics
+export const getMyProfile = async (req, res) => {
+  try {
+    let profile = await ProviderProfile.findOne({ userId: req.user._id }).populate('userId', 'name phone profileImage');
+    if (!profile) {
+      profile = await ProviderProfile.create({
+        userId: req.user._id,
+        category: 'other',
+        availabilityStatus: 'available_now',
+        priceRangeMin: 0,
+        priceRangeMax: 5000,
+      });
+      profile = await profile.populate('userId', 'name phone profileImage');
+    }
+
+    res.json(profile);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

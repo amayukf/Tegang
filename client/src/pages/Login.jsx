@@ -26,9 +26,17 @@ export default function Login() {
       const res = await axios.post(`${API_BASE_URL}/auth/login`, form);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('role', res.data.role);
+      localStorage.setItem('userRole', res.data.role);
       localStorage.setItem('userName', res.data.name);
       toast.success('Signed in', `Welcome back, ${res.data.name.split(' ')[0]}`);
-      navigate(res.data.role === 'customer' ? '/' : '/dashboard', { replace: true });
+
+      if (res.data.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (res.data.role === 'customer') {
+        navigate('/home', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       toast.error('Sign in failed', err.response?.data?.message || 'Check your phone and password');
     } finally {

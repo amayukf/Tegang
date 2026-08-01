@@ -11,6 +11,9 @@ import authRoutes from './routes/auth.routes.js';
 import providerRoutes from './routes/provider.routes.js';
 import jobRoutes from './routes/job.routes.js';
 import reviewRoutes from './routes/review.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import publicRoutes from './routes/public.routes.js';
+import { seedAdminUser } from './controllers/admin.controller.js';
 
 dotenv.config();
 
@@ -47,7 +50,7 @@ app.use('/api/', limiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 200,
   message: { message: 'Too many authentication attempts, please try again later.' }
 });
 
@@ -63,6 +66,8 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/public', publicRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
@@ -81,8 +86,9 @@ const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("Connected to MongoDB");
+    await seedAdminUser();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

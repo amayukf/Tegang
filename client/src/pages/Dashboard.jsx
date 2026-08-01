@@ -13,26 +13,34 @@ export default function Dashboard() {
   const toast = useToast();
   const token = localStorage.getItem('token');
 
+  const [profile, setProfile] = useState(null);
   const [isLive, setIsLive] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchIncomingJobs = useCallback(async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/jobs/incoming`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setJobs(res.data || []);
-    } catch {
-      toast.error('Could not load incoming jobs');
+      const [profRes, jobsRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/providers/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${API_BASE_URL}/jobs/incoming`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      setProfile(profRes.data);
+      setIsLive(profRes.data?.availabilityStatus === 'available_now');
+      setJobs(jobsRes.data || []);
+    } catch (err) {
+      toast.error('Could not load dashboard', err.response?.data?.message);
     } finally {
       setLoading(false);
     }
   }, [token, toast]);
 
-  useEffect(() => { fetchIncomingJobs(); }, [fetchIncomingJobs]);
+  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
   const toggleAvailability = async () => {
     if (toggling) return;
@@ -53,7 +61,25 @@ export default function Dashboard() {
     }
   };
 
-  const displayJobs = jobs.length > 0 ? jobs : [];
+  // Compute real dynamic statistics
+  const completedJobs = jobs.filter(j => j.status === 'completed');
+  const activeJobs = jobs.filter(j => ['quoted', 'accepted', 'in_progress'].includes(j.status));
+  const pendingJobs = jobs.filter(j => j.status === 'pending');
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())).getTime();
+
+  const todayEarnings = completedJobs
+    .filter(j => new Date(j.updatedAt || j.createdAt).getTime() >= startOfToday)
+    .reduce((acc, j) => acc + (j.agreedPrice || 0), 0);
+
+  const weekEarnings = completedJobs
+    .filter(j => new Date(j.updatedAt || j.createdAt).getTime() >= startOfWeek)
+    .reduce((acc, j) => acc + (j.agreedPrice || 0), 0);
+
+  const ratingVal = profile?.rating ? Number(profile.rating).toFixed(1) : '0.0';
+  const ratingCountVal = profile?.ratingCount || 0;
 
   const Stat = ({ label, value, hint, Icon, tone = 'neutral' }) => {
     const tones = {
@@ -72,7 +98,7 @@ export default function Dashboard() {
             {hint && <p className="mt-0.5 text-xs text-neutral-500">{hint}</p>}
           </div>
           <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg ${tones[tone]}`}>
-            <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            <Icon className="h-4.5 w-4.5" strokeWidth={1.8} />
           </span>
         </div>
       </div>
@@ -80,6 +106,7 @@ export default function Dashboard() {
   };
 
   const timeAgo = (date) => {
+    if (!date) return 'recently';
     const diff = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
     if (diff < 1) return 'just now';
     if (diff < 60) return `${diff} min ago`;
@@ -138,40 +165,28 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Metrics */}
+          {/* Real Dynamic Metrics */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat label="Today"      value="ETB 1,200" hint="+12% vs. yesterday" Icon={TrendingUp}   tone="primary" />
-            <Stat label="This week"  value="ETB 6,800" hint="across 8 jobs"         Icon={ClipboardList} tone="neutral" />
-            <Stat label="Rating"     value="4.9"       hint="134 reviews"           Icon={Star}          tone="warn" />
-            <Stat label="Jobs done"  value="312"       hint="lifetime"              Icon={CheckCircle2}   tone="success" />
+            <Stat label="Today"      value={`ETB ${todayEarnings.toLocaleString()}`} hint={`${completedJobs.filter(j => new Date(j.updatedAt || j.createdAt).getTime() >= startOfToday).length} completed`} Icon={TrendingUp} tone="primary" />
+            <Stat label="This week"  value={`ETB ${weekEarnings.toLocaleString()}`}  hint={`across ${completedJobs.length} jobs`} Icon={ClipboardList} tone="neutral" />
+            <Stat label="Rating"     value={ratingVal} hint={`${ratingCountVal} reviews`} Icon={Star} tone="warn" />
+            <Stat label="Jobs done"  value={completedJobs.length} hint="lifetime" Icon={CheckCircle2} tone="success" />
           </section>
 
-          {/* Incoming requests */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-base font-semibold text-neutral-900">Incoming requests</h3>
-                <p className="text-sm text-neutral-500">New job posts matching your category.</p>
-              </div>
-              {displayJobs.length > 0 && (
-                <span className="badge bg-accent-50 text-accent-700 border border-accent-100">
-                  {displayJobs.length} new
+          {/* Active jobs section */}
+          {activeJobs.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-base font-semibold text-neutral-900">Active jobs</h3>
+                  <p className="text-sm text-neutral-500">Jobs currently in progress or accepted.</p>
+                </div>
+                <span className="badge bg-primary-50 text-primary-700 border border-primary-100">
+                  {activeJobs.length} active
                 </span>
-              )}
-            </div>
-
-            {loading ? (
-              <div className="card divide-y divide-neutral-100">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="p-5">
-                    <div className="h-4 w-2/3 bg-neutral-100 rounded animate-pulse mb-3" />
-                    <div className="h-3.5 w-1/2 bg-neutral-100 rounded animate-pulse" />
-                  </div>
-                ))}
               </div>
-            ) : displayJobs.length > 0 ? (
               <div className="card divide-y divide-neutral-100 overflow-hidden">
-                {displayJobs.map(job => {
+                {activeJobs.map(job => {
                   const customer = job.customerId || {};
                   const customerName = customer.name || 'Customer';
                   return (
@@ -182,6 +197,124 @@ export default function Dashboard() {
                     >
                       <div className="flex items-start gap-4">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700 font-semibold">
+                          {customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-semibold text-neutral-900 truncate">{job.description}</h4>
+                              <p className="mt-0.5 text-sm text-neutral-500">
+                                {customerName} · {timeAgo(job.createdAt)}
+                              </p>
+                            </div>
+                            <span className="badge bg-primary-50 text-primary-700 border border-primary-100 capitalize">
+                              {job.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Direct Requests (For You Only) */}
+          {pendingJobs.filter(j => j.providerId).length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="badge bg-amber-50 text-amber-700 border border-amber-200">
+                    <Zap className="h-3.5 w-3.5" strokeWidth={2} /> Direct Booking
+                  </span>
+                  <h3 className="text-base font-semibold text-neutral-900">Direct requests for you</h3>
+                </div>
+                <span className="badge bg-amber-100 text-amber-800 border border-amber-200">
+                  {pendingJobs.filter(j => j.providerId).length} direct
+                </span>
+              </div>
+              <div className="card divide-y divide-amber-100 border-amber-200 bg-amber-50/20 overflow-hidden">
+                {pendingJobs.filter(j => j.providerId).map(job => {
+                  const customer = job.customerId || {};
+                  const customerName = customer.name || 'Customer';
+                  return (
+                    <Link
+                      key={job._id}
+                      to={`/job/${job._id}`}
+                      className="block p-5 hover:bg-amber-50/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 font-semibold">
+                          {customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-semibold text-neutral-900 truncate">{job.description}</h4>
+                                <span className="badge bg-amber-100 text-amber-800 border border-amber-200 text-[11px]">Direct</span>
+                              </div>
+                              <p className="mt-0.5 text-sm text-neutral-500">
+                                {customerName} · {timeAgo(job.createdAt)}
+                              </p>
+                            </div>
+                            <span className="badge bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                              ETB {Number(job.budgetMin || 0).toLocaleString()} – {Number(job.budgetMax || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="mt-2.5 flex items-center justify-between gap-3 flex-wrap">
+                            <p className="inline-flex items-center gap-1 text-sm text-neutral-500">
+                              <MapPin className="h-3.5 w-3.5" strokeWidth={1.8} />
+                              {job.location || '—'}
+                            </p>
+                            <span className="text-xs font-semibold text-amber-700">Tap to respond & send quote &rarr;</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Public Community requests section */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-base font-semibold text-neutral-900">Open community requests</h3>
+                <p className="text-sm text-neutral-500">Public jobs open for all providers to quote.</p>
+              </div>
+              {pendingJobs.filter(j => !j.providerId).length > 0 && (
+                <span className="badge bg-accent-50 text-accent-700 border border-accent-100">
+                  {pendingJobs.filter(j => !j.providerId).length} available
+                </span>
+              )}
+            </div>
+
+            {loading ? (
+              <div className="card divide-y divide-neutral-100">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="p-5">
+                    <div className="h-4 w-2/3 bg-neutral-100 rounded animate-pulse mb-3" />
+                    <div className="h-3.5 w-1/2 bg-neutral-100 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : pendingJobs.filter(j => !j.providerId).length > 0 ? (
+              <div className="card divide-y divide-neutral-100 overflow-hidden">
+                {pendingJobs.filter(j => !j.providerId).map(job => {
+                  const customer = job.customerId || {};
+                  const customerName = customer.name || 'Customer';
+                  return (
+                    <Link
+                      key={job._id}
+                      to={`/job/${job._id}`}
+                      className="block p-5 hover:bg-neutral-50 transition-colors"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-700 font-semibold">
                           {customerName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -224,9 +357,9 @@ export default function Dashboard() {
                 <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 mb-3">
                   <ClipboardList className="h-5 w-5" strokeWidth={1.5} />
                 </div>
-                <h4 className="text-sm font-semibold text-neutral-800">No incoming requests</h4>
+                <h4 className="text-sm font-semibold text-neutral-800">No open requests right now</h4>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Toggle availability above to show up for customers nearby.
+                  New customer job postings will appear here automatically.
                 </p>
               </div>
             )}

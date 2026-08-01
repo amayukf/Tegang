@@ -57,7 +57,13 @@ const providerProfileSchema = new mongoose.Schema({
   },
   workPhotos: [{
     type: String
-  }]
+  }],
+  verificationStatus: {
+    type: String,
+    enum: ['verified', 'pending', 'suspended'],
+    default: 'pending',
+    index: true
+  }
 }, { timestamps: true });
 
 export default mongoose.model('ProviderProfile', providerProfileSchema);

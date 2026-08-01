@@ -184,29 +184,83 @@ export default function JobStatus() {
             </dl>
           </section>
 
+          {/* Job Request Type Banner */}
+          {job.status === 'pending' && (
+            <div className={`p-4 rounded-xl border mb-5 flex items-center justify-between ${
+              job.providerId
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-accent-50 border-accent-200 text-accent-900'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className={`p-2 rounded-lg ${
+                  job.providerId ? 'bg-amber-100 text-amber-800' : 'bg-accent-100 text-accent-700'
+                }`}>
+                  <Zap className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <div>
+                  <h4 className="text-sm font-semibold">
+                    {job.providerId ? '⚡ Direct Request for You' : '🌐 Open Community Request'}
+                  </h4>
+                  <p className="text-xs opacity-80">
+                    {job.providerId
+                      ? 'The customer specifically selected your profile for this job.'
+                      : 'This is a public job open for all providers.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <section className="card p-6 mt-5">
             {/* Provider: quote pending */}
             {role === 'provider' && job.status === 'pending' && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <label htmlFor="qp" className="form-label">Your quote (ETB)</label>
+                  <label htmlFor="qp" className="form-label">Your quote price (ETB)</label>
+                  <p className="text-xs text-neutral-500 mb-2">Customer budget: ETB {Number(job.budgetMin || 0).toLocaleString()} – {Number(job.budgetMax || 0).toLocaleString()}</p>
+                  
+                  {/* Quick preset buttons */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setQuotePrice(String(job.budgetMin || ''))}
+                      className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-medium text-neutral-700"
+                    >
+                      Min: ETB {Number(job.budgetMin || 0).toLocaleString()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuotePrice(String(Math.round(((Number(job.budgetMin || 0) + Number(job.budgetMax || 0)) / 2))))}
+                      className="px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-xs font-medium"
+                    >
+                      Avg: ETB {Number(Math.round(((Number(job.budgetMin || 0) + Number(job.budgetMax || 0)) / 2))).toLocaleString()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuotePrice(String(job.budgetMax || ''))}
+                      className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-xs font-medium text-neutral-700"
+                    >
+                      Max: ETB {Number(job.budgetMax || 0).toLocaleString()}
+                    </button>
+                  </div>
+
                   <input
                     id="qp"
                     type="number"
                     min={0}
-                    className="input"
-                    placeholder="Enter price"
+                    className="input text-base font-medium"
+                    placeholder="e.g. 800"
                     value={quotePrice}
                     onChange={e => setQuotePrice(e.target.value)}
                   />
                 </div>
                 <button
-                  onClick={() => runAction('quote', { agreedPrice: Number(quotePrice) }, 'Quote sent')}
+                  onClick={() => runAction('quote', { agreedPrice: Number(quotePrice) }, 'Quote sent successfully!')}
                   disabled={busy || !quotePrice || Number(quotePrice) <= 0}
-                  className="btn-primary w-full"
+                  className="btn-primary w-full h-11 text-base font-semibold"
                 >
-                  {busy ? 'Sending…' : 'Send quote'}
+                  {busy ? 'Sending quote…' : 'Send quote to customer'}
                 </button>
               </div>
             )}

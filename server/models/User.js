@@ -18,8 +18,18 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'provider'],
+    enum: ['customer', 'provider', 'admin'],
     required: true
+  },
+  profileImage: {
+    type: String,
+    default: ''
+  },
+  status: {
+    type: String,
+    enum: ['active', 'suspended', 'banned'],
+    default: 'active',
+    index: true
   }
 }, { timestamps: true });
 
