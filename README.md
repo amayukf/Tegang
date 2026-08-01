@@ -111,13 +111,9 @@
 
 ---
 
-## 🔐 Administrative Account
+## 🔐 Administrative Access
 
-The platform automatically seeds a default admin account upon starting the server:
-
-- **Phone**: `0929330533`
-- **Password**: `ame123`
-- **Admin Dashboard**: Accessible at `/admin` after logging in.
+Administrative account permissions can be configured via backend seed scripts or environment variables. Ensure production admin login credentials are kept secure and configured in your server `.env` configuration.
 
 ---
 
